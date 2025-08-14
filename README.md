@@ -57,7 +57,7 @@ beautifulsoup4
 
 ---
 
-## 🛠️ Setup
+## Setup
 
 1. **Clone repo**
 
