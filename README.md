@@ -89,9 +89,9 @@ REQUEST_TIMEOUT=20
 
 ## Endpoint
 
-1. > POST /predict
+1. **POST /predict**
 
-   Inferensi dari teks langsung.
+   > Inferensi dari teks langsung.
 
    **Request**
 
@@ -113,9 +113,9 @@ REQUEST_TIMEOUT=20
 
    > label: 0 = valid, 1 = hoax.
 
-2. > POST /extract
+2. **POST /extract**
 
-   Ekstraksi teks dari URL (tanpa prediksi).
+   > Ekstraksi teks dari URL (tanpa prediksi).
 
    **Request**
 
@@ -144,9 +144,9 @@ REQUEST_TIMEOUT=20
    -d '{"url":"https://www.kompas.com/..."}'
    ```
 
-3. > POST /predict_url
+3. **POST /predict_url**
 
-   Ekstraksi + inferensi dalam satu langkah.
+   > Ekstraksi + inferensi dalam satu langkah.
 
    **Request**
 
@@ -177,9 +177,9 @@ REQUEST_TIMEOUT=20
    -d '{"url":"https://news.detik.com/..."}'
    ```
 
-4. > GET /supported_sources
+4. **GET /supported_sources**
 
-   Daftar domain yang saat ini didukung untuk ekstraksi URL.
+   > Daftar domain yang saat ini didukung untuk ekstraksi URL.
 
    **Response**
 
@@ -193,9 +193,9 @@ REQUEST_TIMEOUT=20
 
 **Skema Error**
 
-- 400 – URL tidak valid.
-- 422 – Domain belum didukung / konten artikel terlalu pendek / gagal diekstrak.
-- 500 – Kegagalan jaringan/tidak terduga saat fetching/ekstraksi.
+- **400** – URL tidak valid.
+- **422** – Domain belum didukung / konten artikel terlalu pendek / gagal diekstrak.
+- **500** – Kegagalan jaringan/tidak terduga saat fetching/ekstraksi.
 
 **Contoh**
 
