@@ -1,9 +1,9 @@
+# extractor.py
 import asyncio
-import ipaddress
 import re
 import time
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Callable, Dict, Awaitable
 from urllib.parse import urlparse, urlunparse
 
 import httpx
@@ -18,6 +18,7 @@ SUPPORTED_DOMAINS = [
     "detik.com",
     "liputan6.com",
     "tribunnews.com",
+    # contoh nanti tinggal tambah: "kumparan.com", "voi.id",
 ]
 
 DEFAULT_HEADERS = {
@@ -35,11 +36,12 @@ MIN_TEXT_CHARS = 400           # di bawah ini dianggap gagal
 CACHE_TTL_SECONDS = 300
 
 # Batasan concurrency per host biar gak ngebomb situs
-_HOST_LIMITERS = {}
+_HOST_LIMITERS: Dict[str, asyncio.Semaphore] = {}
 _HOST_LIMIT = 5  # paralel per host
 
 # Cache ringan in-memory
 _cache = {}  # key -> (expires_at, value)
+
 
 @dataclass
 class ExtractResult:
@@ -47,6 +49,7 @@ class ExtractResult:
     source: str
     length: int
     preview: str
+
 
 # ---------- Util ----------
 def _normalize_url(raw: str) -> str:
@@ -58,6 +61,7 @@ def _normalize_url(raw: str) -> str:
     # drop fragment & params; keep query
     return urlunparse((scheme, netloc, path, "", parsed.query, ""))
 
+
 def _public_suffix_match(host: str) -> Optional[str]:
     """Cek apakah host berakhir dengan salah satu SUPPORTED_DOMAINS (suffix match)."""
     host = host.lower()
@@ -66,9 +70,9 @@ def _public_suffix_match(host: str) -> Optional[str]:
             return d
     return None
 
+
 def _is_private_ip(host: str) -> bool:
     """Resolve-less quick guard untuk host yang jelas privat/localhost."""
-    # Hard checks tanpa DNS resolve (cukup untuk 95% kasus)
     priv = (
         host.startswith("localhost")
         or host.startswith("127.")
@@ -86,10 +90,12 @@ def _is_private_ip(host: str) -> bool:
             pass
     return priv
 
+
 def _get_host_limiter(host: str) -> asyncio.Semaphore:
     if host not in _HOST_LIMITERS:
         _HOST_LIMITERS[host] = asyncio.Semaphore(_HOST_LIMIT)
     return _HOST_LIMITERS[host]
+
 
 def _cache_get(key: str):
     now = time.time()
@@ -102,8 +108,10 @@ def _cache_get(key: str):
         return None
     return val
 
+
 def _cache_set(key: str, val):
     _cache[key] = (time.time() + CACHE_TTL_SECONDS, val)
+
 
 def _clean_text(s: str) -> str:
     # Hapus boilerplate ringan
@@ -122,6 +130,7 @@ def _clean_text(s: str) -> str:
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
+
 # ---------- HTTP fetch w/ retry ----------
 async def _fetch_html(url: str) -> Tuple[str, str]:
     """
@@ -135,7 +144,9 @@ async def _fetch_html(url: str) -> Tuple[str, str]:
 
     limiter = _get_host_limiter(host)
     async with limiter:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=REQUEST_TIMEOUT, headers=DEFAULT_HEADERS) as client:
+        async with httpx.AsyncClient(
+            follow_redirects=True, timeout=REQUEST_TIMEOUT, headers=DEFAULT_HEADERS
+        ) as client:
             backoff = 0.6
             last_exc = None
             for _ in range(3):
@@ -154,6 +165,7 @@ async def _fetch_html(url: str) -> Tuple[str, str]:
                     backoff *= 2
             raise last_exc
 
+
 # ---------- AMP fallback ----------
 def _find_amp_href(html: str, base_url: str) -> Optional[str]:
     soup = BeautifulSoup(html, "html.parser")
@@ -165,37 +177,29 @@ def _find_amp_href(html: str, base_url: str) -> Optional[str]:
         amp_url = urlparse(href)
         if not amp_url.netloc:
             # relative → absolut
-            amp_abs = urlunparse((parsed_base.scheme, parsed_base.netloc, amp_url.path, "", amp_url.query, ""))
+            amp_abs = urlunparse(
+                (parsed_base.scheme, parsed_base.netloc, amp_url.path, "", amp_url.query, "")
+            )
             return amp_abs
         return href
     return None
 
-# ---------- Ekstraksi inti ----------
-async def extract_article(url_raw: str) -> ExtractResult:
-    url = _normalize_url(url_raw)
-    parsed = urlparse(url)
-    host = parsed.netloc.lower()
 
-    domain_hit = _public_suffix_match(host)
-    if not domain_hit:
-        raise ValueError(f"Domain '{host}' belum didukung.")
-
-    # Cache
-    cache_key = f"extract:{url}"
-    cached = _cache_get(cache_key)
-    if cached:
-        return cached
-
+# ---------- Generic extraction pipeline (dipakai semua domain by default) ----------
+async def _extract_generic(url: str, source_host: Optional[str] = None) -> ExtractResult:
+    """
+    Pipeline default: fetch → trafilatura → (fallback AMP) → cleaning → preview
+    Dipakai oleh semua handler domain saat ini.
+    """
     html, final_url = await _fetch_html(url)
 
-    # Try Trafilatura (mode recall + bahasa Indonesia)
     text = trafilatura.extract(
         html,
         include_comments=False,
         include_images=False,
         favor_recall=True,
         target_language="id",
-        url=final_url
+        url=final_url,
     )
 
     if not text or len(text.strip()) < MIN_TEXT_CHARS:
@@ -209,7 +213,7 @@ async def extract_article(url_raw: str) -> ExtractResult:
                 include_images=False,
                 favor_recall=True,
                 target_language="id",
-                url=amp_final
+                url=amp_final,
             )
             if text2 and len(text2.strip()) > len(text or ""):
                 text = text2
@@ -219,15 +223,80 @@ async def extract_article(url_raw: str) -> ExtractResult:
         raise ValueError("Konten artikel terlalu pendek / gagal diekstrak.")
 
     clean = _clean_text(text)
+    host = source_host or urlparse(final_url).netloc.lower()
     preview = (clean[:300] + "…") if len(clean) > 300 else clean
 
-    result = ExtractResult(
-        text=clean,
-        source=host,
-        length=len(clean),
-        preview=preview
-    )
+    return ExtractResult(text=clean, source=host, length=len(clean), preview=preview)
 
-    print(clean)
+
+# ---------- Domain-specific handlers (sementara sama semua) ----------
+# Signature handler: async def handler(url: str) -> ExtractResult
+async def _extract_kompas(url: str) -> ExtractResult:
+    return await _extract_generic(url)
+
+async def _extract_cnnindonesia(url: str) -> ExtractResult:
+    return await _extract_generic(url)
+
+async def _extract_tempo(url: str) -> ExtractResult:
+    return await _extract_generic(url)
+
+async def _extract_detik(url: str) -> ExtractResult:
+    return await _extract_generic(url)
+
+async def _extract_liputan6(url: str) -> ExtractResult:
+    return await _extract_generic(url)
+
+async def _extract_tribunnews(url: str) -> ExtractResult:
+    return await _extract_generic(url)
+
+# Contoh stub kalau nanti tambah domain baru:
+# async def _extract_kumparan(url: str) -> ExtractResult:
+#     # nanti bisa override: pilih selector <article>, buang "BACA JUGA", dsb.
+#     return await _extract_generic(url)
+
+
+# ---------- Registry: suffix-domain → handler ----------
+# NB: gunakan suffix base (tanpa subdomain) supaya match subdomain seperti news.detik.com
+DOMAIN_HANDLERS: Dict[str, Callable[[str], Awaitable[ExtractResult]]] = {
+    "kompas.com": _extract_kompas,
+    "cnnindonesia.com": _extract_cnnindonesia,
+    "tempo.co": _extract_tempo,
+    "detik.com": _extract_detik,
+    "liputan6.com": _extract_liputan6,
+    "tribunnews.com": _extract_tribunnews,
+    # "kumparan.com": _extract_kumparan,  # contoh
+}
+
+
+# ---------- Entry point yang dipakai FastAPI ----------
+async def extract_article(url_raw: str) -> ExtractResult:
+    """
+    Router per domain + cache. Public API untuk dipanggil dari main.py
+    """
+    url = _normalize_url(url_raw)
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+
+    domain_hit = _public_suffix_match(host)
+    if not domain_hit:
+        raise ValueError(f"Domain '{host}' belum didukung.")
+
+    # Cache per URL
+    cache_key = f"extract:{url}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    # Pick handler by suffix domain (kompas.com, detik.com, ...)
+    handler = DOMAIN_HANDLERS.get(domain_hit)
+    if not handler:
+        # fallback aman kalau SUPPORTED_DOMAINS berisi domain yang belum punya handler
+        result = await _extract_generic(url, source_host=host)
+        _cache_set(cache_key, result)
+        return result
+
+    result = await handler(url)
+    # Normalisasi 'source' agar tetap host asli (bukan AMP host) untuk konsistensi FE
+    result.source = host
     _cache_set(cache_key, result)
     return result
