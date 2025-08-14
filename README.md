@@ -28,11 +28,11 @@ Core
 
 ## Fitur Utama
 
-- Dua Mode Input: teks mentah & URL artikel.
-- Ekstraksi Tahan Banting: Trafilatura, fallback amphtml, pembersihan boilerplate, validasi Content-Type, batas ukuran dokumen.
-- Keamanan Praktis: blok localhost/IP privat (anti-SSRF), suffix-whitelist domain.
-- Kinerja: retry eksponensial, limiter per host, cache in-memory.
-- Contract Stabil: skema respons konsisten untuk FE.
+- **Dua Mode Input**: teks mentah & URL artikel.
+- **Ekstraksi Tahan Banting**: Trafilatura, fallback amphtml, pembersihan boilerplate, validasi Content-Type, batas ukuran dokumen.
+- **Keamanan Praktis**: blok localhost/IP privat (anti-SSRF), suffix-whitelist domain.
+- **Kinerja**: retry eksponensial, limiter per host, cache in-memory.
+- **Contract Stabil**: skema respons konsisten untuk FE.
 
 ---
 
@@ -89,7 +89,8 @@ REQUEST_TIMEOUT=20
 
 ## Endpoint
 
-1. **POST /predict**
+1. > POST /predict
+
    Inferensi dari teks langsung.
 
    **Request**
@@ -112,7 +113,8 @@ REQUEST_TIMEOUT=20
 
    > label: 0 = valid, 1 = hoax.
 
-2. **POST /extract**
+2. > POST /extract
+
    Ekstraksi teks dari URL (tanpa prediksi).
 
    **Request**
@@ -142,7 +144,8 @@ REQUEST_TIMEOUT=20
    -d '{"url":"https://www.kompas.com/..."}'
    ```
 
-3. **POST /predict_url**
+3. > POST /predict_url
+
    Ekstraksi + inferensi dalam satu langkah.
 
    **Request**
@@ -174,7 +177,8 @@ REQUEST_TIMEOUT=20
    -d '{"url":"https://news.detik.com/..."}'
    ```
 
-4. **GET /supported_sources**
+4. > GET /supported_sources
+
    Daftar domain yang saat ini didukung untuk ekstraksi URL.
 
    **Response**
