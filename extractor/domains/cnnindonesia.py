@@ -8,6 +8,50 @@ from ..base import ExtractResult, MIN_TEXT_CHARS, fetch_html, find_amp_href, cle
 def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s or "").strip()
 
+def _clean_title(raw: str) -> str:
+    t = _norm(raw)
+
+    # buang prefix breaking/newsy
+    t = re.sub(r'^\s*(breaking\s+news\s*:\s*|breaking\s+news\s+cnn\s+indonesia\s*[:-]?\s*)',
+               '', t, flags=re.IGNORECASE)
+
+    # buang suffix brand & kanal
+    t = re.sub(r'\s*[-|–]\s*cnn indonesia\b.*$', '', t, flags=re.IGNORECASE)
+
+    # buang sisa “| CNN Indonesia” atau “- CNN Indonesia”
+    t = re.sub(r'\s*(\||-)\s*cnn indonesia\b.*$', '', t, flags=re.IGNORECASE)
+
+    # rapiin kutip yang dobel/longgar
+    t = re.sub(r'^[\'"“”‘’\[\(]+\s*', '', t)
+    t = re.sub(r'\s*[\'"“”‘’\]\)]+$', '', t)
+
+    return _norm(t)
+
+def _pick_best_title(cands: list[str]) -> str | None:
+    """
+    Prioritas: h1 dulu (karena kamu push h1 paling awal), lalu og:title/twitter:title.
+    Saring kandidat yang terlalu pendek/generic, bersihin brand suffix.
+    """
+    seen = set()
+    BEST_MIN_LEN = 8
+
+    cleaned = []
+    for c in cands:
+        ct = _clean_title(c)
+        key = ct.lower()
+        if not ct or len(ct) < BEST_MIN_LEN:
+            continue
+        if key in seen:
+            continue
+        # filter judul generik
+        if ct.lower() in ("cnn indonesia", "beranda", "news"):
+            continue
+        seen.add(key)
+        cleaned.append(ct)
+
+    return cleaned[0] if cleaned else None
+
+
 def _extract_title_candidates(soup: BeautifulSoup) -> list[str]:
     cands = []
 
@@ -43,7 +87,7 @@ def _extract_title_candidates(soup: BeautifulSoup) -> list[str]:
 def _preclean_cnn_html(html: str) -> tuple[str, list[str]]:
     soup = BeautifulSoup(html, "html.parser")
 
-    # --- hapus blok non-body ---
+    # hapus blok non-body
     selectors = [
         "figure", "figcaption",
         ".media_artikel", ".media__caption",
@@ -56,18 +100,21 @@ def _preclean_cnn_html(html: str) -> tuple[str, list[str]]:
         for node in soup.select(sel):
             node.decompose()
 
-    # buang node “BREAKING NEWS”, “[Gambas:Video CNN]”, “Lihat Juga …”
     for node in soup.find_all(True):
         txt = node.get_text(" ", strip=True)
         if not txt:
             continue
         low = txt.lower()
-        if low.startswith("breaking news cnn indonesia") or "[gambas:gambar cnn" or "[gambar:gambar cnn" or "[gambas:video cnn"  or "[gambar:video cnn" in low or low.startswith("lihat juga"):
-            node.decompose()
+        if low.startswith("breaking news cnn indonesia"):
+            node.decompose(); continue
+        if ("[gambas:video cnn" in low) or ("[gambar:video cnn" in low) \
+           or ("[gambas:gambar cnn" in low) or ("[gambar:gambar cnn" in low):
+            node.decompose(); continue
+        if low.startswith("lihat juga"):
+            node.decompose(); continue
 
-    # ambil kandidat judul SEBELUM soup dirender ke string
+    # kandidat judul sebelum render
     title_candidates = _extract_title_candidates(soup)
-
     return str(soup), title_candidates
 
 def _strip_leading_title(text: str, title_candidates: list[str]) -> str:
@@ -102,8 +149,43 @@ def _strip_leading_title(text: str, title_candidates: list[str]) -> str:
 
     return _norm(t)
 
+def _strip_cnn_dateline(t: str) -> str:
+    # Pola: "Jumat, 15 Agu 2025 11:36 WIB" (opsional diawali "CNN Indonesia")
+    t = re.sub(
+        r'^\s*(?:cnn\s*indonesia\s*)?(?:[,•-]?\s*)?'
+        r'(?:senin|selasa|rabu|kamis|jumat|sabtu|minggu)\s*,?\s*'
+        r'\d{1,2}\s+\w+\s+\d{4}\s+\d{1,2}:\d{2}\s*wib\s*',
+        ' ',
+        t, flags=re.IGNORECASE
+    )
+
+    # Pola umum dateline: "Jakarta, CNN Indonesia -- " / "—" / "-" (tanpa tanggal)
+    t = re.sub(
+        r'^\s*[A-Za-zÀ-ÿ .\'-]+,\s*cnn\s*indonesia\s*[—–-]{1,2}\s*',
+        ' ',
+        t, flags=re.IGNORECASE
+    )
+
+    # Kalau ada format: "... WIB Jakarta, CNN Indonesia -- " (tanggal + lokasi)
+    t = re.sub(
+        r'^\s*(?:.*?wib\s+)?[A-Za-zÀ-ÿ .\'-]+,\s*cnn\s*indonesia\s*[—–-]{1,2}\s*',
+        ' ',
+        t, flags=re.IGNORECASE
+    )
+
+    # Back-up: "CNN Indonesia --" di paling awal tanpa lokasi
+    t = re.sub(
+        r'^\s*cnn\s*indonesia\s*[—–-]{1,2}\s*',
+        ' ',
+        t, flags=re.IGNORECASE
+    )
+    return t
+
 def _postprocess_cnn(text: str, title_candidates: list[str]) -> str:
     t = text
+
+    # hapus dateline header lebih dulu
+    t = _strip_cnn_dateline(_norm(t))
 
     # buang artefak multimedia & CTA
     t = re.sub(r'\[Gambar:Gambar CNN\]', ' ', t, flags=re.IGNORECASE)
@@ -113,11 +195,18 @@ def _postprocess_cnn(text: str, title_candidates: list[str]) -> str:
     t = re.sub(r'^\s*BREAKING NEWS CNN Indonesia[^\n]*', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\bLihat Juga\s*:\s*[^\n]+', ' ', t, flags=re.IGNORECASE)
 
-    # byline tail (inisial reporter/editor)
-    t = re.sub(r'\s*\([a-z]{2,4}/[a-z]{2,4}\)\s*(?=$|[.!?]\s*$)', ' ', t, flags=re.IGNORECASE)
+    # inisial reporter/editor di mana saja, contoh: (mnf/ugo)
+    t = re.sub(r'\s*\([a-z]{2,5}/[a-z]{2,5}\)\s*', ' ', t, flags=re.IGNORECASE)
 
     # strip judul di awal
     t = _strip_leading_title(_norm(t), title_candidates)
+
+    # potong footer "TOPIK TERKAIT / ARTIKEL TERKAIT / TERKAIT LAINNYA DI DETIKNETWORK"
+    t = re.sub(
+        r'\b(TOPIK\s+TERKAIT|ARTIKEL\s+TERKAIT|TERKAIT\s+LAINNYA\s+DI\s+DETIKNETWORK)\b.*$',
+        ' ',
+        t, flags=re.IGNORECASE | re.DOTALL
+    )
 
     # rapikan
     t = re.sub(r'\s*\|\s*', ' ', t)
@@ -152,7 +241,17 @@ async def extract(url: str) -> ExtractResult:
     clean = clean_text_basic(text)
     clean = _postprocess_cnn(clean, title_cands)
 
+    # ---- NEW: tentukan judul ----
+    title = _pick_best_title(title_cands) or ""
+    # fallback terakhir: pakai 120 huruf pertama (jarang diperlukan)
+    if not title:
+        title = _clean_title(clean[:120])
+
     host = urlparse(final_url).netloc.lower()
-    title = "judul"
-    content = clean
-    return ExtractResult(text=clean, source=host, length=len(clean), title=title, content=content)
+    return ExtractResult(
+        text=clean,
+        source=host,
+        length=len(clean),
+        title=title,
+        content=clean,
+    )
