@@ -42,6 +42,7 @@ class ExtractResult:
     text: str
     source: str
     length: int
+    title: str
     preview: str
 
 # ---------- Util ----------

@@ -31,6 +31,7 @@ class PredictOut(BaseModel):
     p_hoax: float
     source: str
     extracted_chars: int
+    title: str
     preview: str
 
 class Item(BaseModel):
@@ -61,7 +62,7 @@ def supported_sources():
 async def extract_url(payload: URLIn):
     try:
         ext = await extract_article(str(payload.url))
-        return {"text": ext.text, "source": ext.source, "length": ext.length, "preview": ext.preview}
+        return {"text": ext.text, "source": ext.source, "length": ext.length, "title": ext.title, "preview": ext.preview}
     except ValueError as e:
         # error validasi / ekstraksi yang bisa dipahami user
         raise HTTPException(status_code=422, detail=str(e))
@@ -84,5 +85,6 @@ async def predict_url(payload: URLIn):
         p_hoax=float(pred["p_hoax"]),
         source=ext.source.replace("www.",""),
         extracted_chars=ext.length,
+        title=ext.title,
         preview=ext.preview
     )

@@ -112,4 +112,6 @@ async def extract(url: str) -> ExtractResult:
     clean = re.sub(r'\s{2,}', ' ', clean).strip()
 
     host = urlparse(final_url).netloc.lower()
-    return ExtractResult(text=clean, source=host, length=len(clean), preview=clean)
+    title = "judul"
+    preview = clean
+    return ExtractResult(text=clean, source=host, length=len(clean), title=title, preview=preview)

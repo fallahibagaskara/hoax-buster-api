@@ -198,5 +198,6 @@ async def extract(url: str) -> ExtractResult:
     clean = _postprocess_l6(clean)
 
     host = urlparse(final_url).netloc.lower()
+    title = "judul"
     preview = clean
-    return ExtractResult(text=clean, source=host, length=len(clean), preview=preview)
+    return ExtractResult(text=clean, source=host, length=len(clean), title=title, preview=preview)

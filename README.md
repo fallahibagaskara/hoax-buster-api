@@ -132,7 +132,8 @@ REQUEST_TIMEOUT=20
    "text": "Konten artikel yang sudah dibersihkan...",
    "source": "kompas.com",
    "length": 4821,
-   "preview": "Cuplikan 300 karakter…"
+   "title": "Judul artikel"
+   "preview": "Isi artikel"
    }
    ```
 
@@ -165,7 +166,8 @@ REQUEST_TIMEOUT=20
    "p_hoax": 0.09,
    "source": "detik.com",
    "extracted_chars": 6230,
-   "preview": "Cuplikan 300 karakter…"
+   "title": "Judul artikel"
+   "preview": "Isi artikel"
    }
    ```
 
@@ -235,7 +237,7 @@ SUPPORTED_DOMAINS = [
 Strategi cepat:
 
 - Tambah suffix domain.
-- Uji /extract → cek length & preview.
+- Uji /extract → cek length, title & preview.
 - Jika sering gagal, tambahkan selector khusus via BeautifulSoup di extractor.
 
 ---
