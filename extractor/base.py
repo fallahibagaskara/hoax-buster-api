@@ -43,7 +43,7 @@ class ExtractResult:
     source: str
     length: int
     title: str
-    preview: str
+    content: str
 
 # ---------- Util ----------
 def normalize_url(raw: str) -> str:

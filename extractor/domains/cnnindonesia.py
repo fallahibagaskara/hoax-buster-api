@@ -154,5 +154,5 @@ async def extract(url: str) -> ExtractResult:
 
     host = urlparse(final_url).netloc.lower()
     title = "judul"
-    preview = clean
-    return ExtractResult(text=clean, source=host, length=len(clean), title=title, preview=preview)
+    content = clean
+    return ExtractResult(text=clean, source=host, length=len(clean), title=title, content=content)

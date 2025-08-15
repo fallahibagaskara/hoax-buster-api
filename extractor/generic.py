@@ -28,5 +28,5 @@ async def extract_generic(url: str, source_host: str | None = None) -> ExtractRe
     clean = clean_text_basic(text)
     host = source_host or urlparse(final_url).netloc.lower()
     title = "judul"
-    preview = clean
-    return ExtractResult(text=clean, source=host, length=len(clean), title=title, preview=preview)
+    content = clean
+    return ExtractResult(text=clean, source=host, length=len(clean), title=title, content=content)

@@ -32,7 +32,7 @@ class PredictOut(BaseModel):
     source: str
     extracted_chars: int
     title: str
-    preview: str
+    content: str
 
 class Item(BaseModel):
     text: str
@@ -62,7 +62,7 @@ def supported_sources():
 async def extract_url(payload: URLIn):
     try:
         ext = await extract_article(str(payload.url))
-        return {"text": ext.text, "source": ext.source, "length": ext.length, "title": ext.title, "preview": ext.preview}
+        return {"text": ext.text, "source": ext.source, "length": ext.length, "title": ext.title, "content": ext.content}
     except ValueError as e:
         # error validasi / ekstraksi yang bisa dipahami user
         raise HTTPException(status_code=422, detail=str(e))
@@ -86,5 +86,5 @@ async def predict_url(payload: URLIn):
         source=ext.source.replace("www.",""),
         extracted_chars=ext.length,
         title=ext.title,
-        preview=ext.preview
+        content=ext.content
     )
