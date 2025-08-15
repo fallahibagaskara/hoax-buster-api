@@ -1,4 +1,3 @@
-# extractor/domains/kompas.py
 from ..generic import extract_generic
 from ..base import ExtractResult
 

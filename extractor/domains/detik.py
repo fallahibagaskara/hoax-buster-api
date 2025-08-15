@@ -1,4 +1,3 @@
-# extractor/domains/detik.py
 import re
 from urllib.parse import urlparse
 import trafilatura
