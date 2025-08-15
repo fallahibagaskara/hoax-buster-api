@@ -30,3 +30,7 @@ Studi baru yang diterbitkan Journal of Adolescent Health, seperti dikutip Psypos
 Dipimpin oleh Eric S. Kim dari University of British Columbia, Kanada, tim peneliti berusaha menyelidiki apakah kesepian di masa remaja dapat memprediksi kondisi kesehatan dan kesejahteraan yang buruk di masa dewasa. 
 
 (BUANG) | Air Bersih, Sanitasi, dan Nikah Dini Jadi Pemicu Stunting, BKKBN Gandeng Swasta untuk Intervensi | |---| | Angka Stunting Nasional Turun Jadi 19,8 Persen, BKKBN Ngotot Turun 14 Persen | |---| | BKKBN Libatkan Tokoh Agama untuk Menekan Pernikahan Dini | |---| | Depresi Akibat Masalah Bertubi-tubi, Talitha Curtis Ungkap Alasan Mengurung Diri Selama 14 Hari | |---| | Dukung Program TAMASYA BKKBN, BAZNAS Beri Bantuan untuk 1.000 Anak di Wilayah 3T | |---|
+
+testing: 
+- https://www.tribunnews.com/nasional/2025/08/14/20-persen-remaja-indonesia-kesepian-berisiko-punya-masalah-kesehatan-mental-saat-dewasa
+- https://www.tribunnews.com/nasional/2025/07/17/bkkbn-libatkan-tokoh-agama-untuk-menekan-pernikahan-dini
