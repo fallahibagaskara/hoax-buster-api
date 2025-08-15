@@ -64,7 +64,7 @@ def _postprocess_tempo(text: str) -> str:
         flags=re.IGNORECASE
     )
 
-    # Hapus kata 'Pilihan' di akhir artikel
+    # Hapus kata 'Pilihan' di akhir artikel berita
     t = re.sub(r'Pilihan\s*$', ' ', t, flags=re.IGNORECASE)
 
     # Rapikan whitespace
@@ -101,7 +101,7 @@ async def extract(url: str) -> ExtractResult:
                 text, final_url = text2, amp_final
 
     if not text or len(text.strip()) < MIN_TEXT_CHARS:
-        raise ValueError("Konten artikel terlalu pendek / gagal diekstrak.")
+        raise ValueError("Konten artikel berita terlalu pendek / gagal diekstrak.")
 
     clean = clean_text_basic(text)
     clean = _postprocess_tempo(clean)

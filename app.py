@@ -67,7 +67,7 @@ async def extract_url(payload: URLIn):
         # error validasi / ekstraksi yang bisa dipahami user
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gagal mengambil/ekstrak artikel: {e}")
+        raise HTTPException(status_code=500, detail=f"Gagal mengambil/ekstrak artikel berita: {e}")
 
 @app.post("/predict_url", response_model=PredictOut)
 async def predict_url(payload: URLIn):
@@ -76,7 +76,7 @@ async def predict_url(payload: URLIn):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gagal mengambil/ekstrak artikel: {e}")
+        raise HTTPException(status_code=500, detail=f"Gagal mengambil/ekstrak artikel berita: {e}")
 
     pred = _predict_single(ext.text)
     return PredictOut(

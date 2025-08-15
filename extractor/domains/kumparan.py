@@ -140,7 +140,7 @@ async def extract(url: str) -> ExtractResult:
                 text, final_url = text2, amp_final
 
     if not text or len(_norm(text)) < MIN_TEXT_CHARS:
-        raise ValueError("Konten artikel terlalu pendek / gagal diekstrak.")
+        raise ValueError("Konten artikel berita terlalu pendek / gagal diekstrak.")
 
     clean = clean_text_basic(text)
     clean = _postprocess_kumparan(clean)

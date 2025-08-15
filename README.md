@@ -1,6 +1,6 @@
 # Hoax Buster — REST API (IndoBERT Hoax Detector)
 
-> API inference untuk deteksi hoaks berbasis IndoBERT, dengan dua alur input: teks langsung dan URL artikel (ekstraksi otomatis dari media Indonesia populer). Dibangun dengan FastAPI + Transformers.
+> API inference untuk deteksi hoaks berbasis IndoBERT, dengan dua alur input: teks langsung dan URL artikel berita (ekstraksi otomatis dari media Indonesia populer). Dibangun dengan FastAPI + Transformers.
 
 ## TL;DR
 
@@ -28,7 +28,7 @@ Core
 
 ## Fitur Utama
 
-- **Dua Mode Input**: teks mentah & URL artikel.
+- **Dua Mode Input**: teks mentah & URL artikel berita .
 - **Ekstraksi Tahan Banting**: Trafilatura, fallback amphtml, pembersihan boilerplate, validasi Content-Type, batas ukuran dokumen.
 - **Keamanan Praktis**: blok localhost/IP privat (anti-SSRF), suffix-whitelist domain.
 - **Kinerja**: retry eksponensial, limiter per host, cache in-memory.
@@ -97,7 +97,7 @@ REQUEST_TIMEOUT=20
 
    ```bash
    {
-   "text": "Isi artikel/berita lengkap di sini..."
+   "text": "Konten artikel berita lengkap di sini..."
    }
    ```
 
@@ -129,11 +129,11 @@ REQUEST_TIMEOUT=20
 
    ```bash
    {
-   "text": "Konten artikel yang sudah dibersihkan...",
+   "text": "Konten artikel berita yang sudah dibersihkan...",
    "source": "kompas.com",
    "length": 4821,
-   "title": "Judul artikel"
-   "content": "Isi artikel"
+   "title": "Judul artikel berita"
+   "content": "Konten artikel berita"
    }
    ```
 
@@ -166,8 +166,8 @@ REQUEST_TIMEOUT=20
    "p_hoax": 0.09,
    "source": "detik.com",
    "extracted_chars": 6230,
-   "title": "Judul artikel"
-   "content": "Isi artikel"
+   "title": "Judul artikel berita"
+   "content": "Konten artikel berita"
    }
    ```
 
@@ -196,7 +196,7 @@ REQUEST_TIMEOUT=20
 **Skema Error**
 
 - **400** – URL tidak valid.
-- **422** – Domain belum didukung / konten artikel terlalu pendek / gagal diekstrak.
+- **422** – Domain belum didukung / konten artikel berita terlalu pendek / gagal diekstrak.
 - **500** – Kegagalan jaringan/tidak terduga saat fetching/ekstraksi.
 
 **Contoh**

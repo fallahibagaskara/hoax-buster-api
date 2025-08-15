@@ -102,7 +102,7 @@ async def extract(url: str) -> ExtractResult:
         ) or ""
 
     if not text or len(text.strip()) < MIN_TEXT_CHARS:
-        raise ValueError("Konten artikel terlalu pendek / gagal diekstrak.")
+        raise ValueError("Konten artikel berita terlalu pendek / gagal diekstrak.")
 
     clean = clean_text_basic(text)
     clean = _strip_kompas_prefix(clean)
