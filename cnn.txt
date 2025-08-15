@@ -23,3 +23,7 @@ Hasto menerima grasi dari Presiden Prabowo Subianto. Kemudian pada Jumat, 1 Agus
 Pada hari yang sama, PDIP menggelar Kongres VI di Bali dan menetapkan Megawati Soekarnoputri sebagai ketua umum. Namun, dalam formatur kepengurusan yang diumumkan 2 Agustus, Hasto terpental dari posisi sekjen. 
 
 Saat itu, Megawati sendiri yang menjadi sekjen partai dengan status Plt hingga akhirnya Hasto terpilih kembali sebagai sekjen PDIP.
+
+testing: 
+- https://www.cnnindonesia.com/nasional/20250814144139-32-1262446/megawati-kembali-tunjuk-hasto-kristiyanto-jadi-sekjen-pdip
+- https://www.cnnindonesia.com/ekonomi/20250815140757-532-1262837/prabowo-ungkap-3-mafia-di-pidato-kenegaraan-ini-daftarnya

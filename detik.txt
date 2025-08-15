@@ -32,5 +32,9 @@ Oleh sebab itu, pihaknya bekerja sama dengan semua pemerintah desa di Kota Santr
 
 (BUANG) Saksikan Live DetikSore:
 
+testing:
+- https://www.detik.com/jatim/berita/d-8059719/ini-alasan-warga-jombang-tak-demo-meski-pbb-p2-naik-1-202
+- https://www.detik.com/jatim/berita/d-8059719/ini-alasan-warga-jombang-tak-demo-meski-pbb-p2-naik-1-202#google_vignette
+
 
 

@@ -20,3 +20,7 @@ Dalam petitumnya, mereka meminta hakim konstitusi menyatakan Pasal 11 ayat (2) U
 Pemohon juga meminta Mahkamah Konstitusi menyatakan Pasal 11 ayat (2) UU Sisdiknas tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang frasa “yang berusia tujuh sampai dengan lima belas tahun” tidak dimaknai “pemerintah dan pemerintah daerah menjamin tersedianya dana guna terselenggarakannya pendidikan bagi setiap warga negara pada seluruh jenjang pendidikan secara bertahap".
 
 (BUANG) Pilihan
+
+testing: 
+- https://www.tempo.co/hukum/mahkamah-konstitusi-tolak-gugatan-uu-sisdiknas-soal-kuliah-gratis-2058859
+- https://www.tempo.co/hukum/kpk-periksa-rektor-usu-di-kasus-proyek-jalan-dinas-pupr-sumut--2059208
