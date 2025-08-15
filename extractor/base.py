@@ -16,6 +16,7 @@ SUPPORTED_DOMAINS = [
     "detik.com",
     "liputan6.com",
     "tribunnews.com",
+    "kumparan.com",
 ]
 
 DEFAULT_HEADERS = {

@@ -27,5 +27,5 @@ async def extract_generic(url: str, source_host: str | None = None) -> ExtractRe
 
     clean = clean_text_basic(text)
     host = source_host or urlparse(final_url).netloc.lower()
-    preview = (clean[:300] + "…") if len(clean) > 300 else clean
+    preview = clean
     return ExtractResult(text=clean, source=host, length=len(clean), preview=preview)
