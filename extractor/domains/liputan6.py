@@ -81,6 +81,58 @@ def _is_noise_text(text: str) -> bool:
         return True
     return False
 
+
+# ---------- title helpers ----------
+def _clean_title_l6(raw: str) -> str:
+    t = _norm(raw)
+    # hapus suffix brand
+    t = re.sub(r'\s*[\-|–]\s*Liputan6\.com\b.*$', '', t, flags=re.IGNORECASE)
+    # rapikan kutip/kurung di pinggir
+    t = re.sub(r'^[\'"“”‘’\[\(]+\s*', '', t)
+    t = re.sub(r'\s*[\'"“”‘’\]\)]+$', '', t)
+    return _norm(t)
+
+def _extract_title_candidates_l6(soup: BeautifulSoup) -> list[str]:
+    cands = []
+    # 1) H1 utama
+    h1 = soup.select_one("h1.read-page--header--title") or soup.find("h1")
+    if h1:
+        cands.append(_norm(h1.get_text(" ", strip=True)))
+    # 2) meta og:title / twitter:title
+    for m in soup.select("meta[property='og:title'], meta[name='twitter:title']"):
+        content = _norm(m.get("content") or "")
+        if content:
+            cands.append(content)
+    # 3) <title>
+    if soup.title and soup.title.string:
+        cands.append(_norm(soup.title.string))
+
+    # dedup (case-insensitive)
+    seen, uniq = set(), []
+    for t in cands:
+        k = t.lower()
+        if k not in seen and t:
+            seen.add(k)
+            uniq.append(t)
+    return uniq
+
+def _pick_best_title_l6(cands: list[str]) -> str | None:
+    BEST_MIN_LEN = 6
+    seen = set()
+    cleaned = []
+    for c in cands:
+        ct = _clean_title_l6(c)
+        if not ct or len(ct) < BEST_MIN_LEN:
+            continue
+        k = ct.lower()
+        if k in seen:
+            continue
+        if ct.lower() in ("liputan6", "beranda", "news"):
+            continue
+        seen.add(k)
+        cleaned.append(ct)
+    return cleaned[0] if cleaned else None
+
 def _preclean_l6_html(html: str) -> str:
     """
     Whitelist extraction di container .article-content-body:
@@ -164,6 +216,12 @@ def _postprocess_l6(text: str) -> str:
 # ---------- main handler ----------
 async def extract(url: str) -> ExtractResult:
     html, final_url = await fetch_html(url)
+
+    # --- ambil judul dari HTML asli (sebelum preclean)
+    soup_title = BeautifulSoup(html, "html.parser")
+    title_cands = _extract_title_candidates_l6(soup_title)
+    title = _pick_best_title_l6(title_cands) or ""
+
     cleaned_html = _preclean_l6_html(html)
 
     text = trafilatura.extract(
@@ -198,6 +256,10 @@ async def extract(url: str) -> ExtractResult:
     clean = _postprocess_l6(clean)
 
     host = urlparse(final_url).netloc.lower()
-    title = "judul"
-    content = clean
-    return ExtractResult(text=clean, source=host, length=len(clean), title=title, content=content)
+    return ExtractResult(
+        text=clean,
+        source=host,
+        length=len(clean),
+        title=title if title else _clean_title_l6(clean[:120]),
+        content=clean,
+    )
