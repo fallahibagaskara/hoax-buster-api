@@ -1,7 +1,8 @@
 services:
   hoaxbuster:
     build: .
-    container_name: hoaxbuster_api:latest
+    image: hoaxbuster_api:latest # <--- ini yang atur nama image
+    container_name: hoaxbuster_api
     ports:
       - "6666:6666"
     restart: unless-stopped
