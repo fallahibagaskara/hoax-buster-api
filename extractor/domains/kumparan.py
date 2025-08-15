@@ -16,6 +16,57 @@ def _is_noise_text(txt: str) -> bool:
         or low.startswith("live update")
     )
 
+# ---------- title helpers ----------
+def _clean_title_kumparan(raw: str) -> str:
+    t = _norm(raw)
+    # buang suffix brand/kanal, kalau ada
+    t = re.sub(r'\s*([\-–|])\s*kumparan\b.*$', '', t, flags=re.IGNORECASE)
+    # rapikan kutip/kurung pinggir
+    t = re.sub(r'^[\'"“”‘’\[\(]+\s*', '', t)
+    t = re.sub(r'\s*[\'"“”‘’\]\)]+$', '', t)
+    return _norm(t)
+
+def _extract_title_candidates_kumparan(soup: BeautifulSoup) -> list[str]:
+    cands = []
+    # 1) H1 utama
+    h1 = soup.select_one("h1[data-qa-id='story-title']") or soup.find("h1")
+    if h1:
+        cands.append(_norm(h1.get_text(" ", strip=True)))
+    # 2) meta og:title / twitter:title
+    for m in soup.select("meta[property='og:title'], meta[name='twitter:title']"):
+        content = _norm(m.get("content") or "")
+        if content:
+            cands.append(content)
+    # 3) <title>
+    if soup.title and soup.title.string:
+        cands.append(_norm(soup.title.string))
+
+    # de-dup (case-insensitive, preserve order)
+    seen, uniq = set(), []
+    for t in cands:
+        k = t.lower()
+        if k not in seen and t:
+            seen.add(k); uniq.append(t)
+    return uniq
+
+def _pick_best_title_kumparan(cands: list[str]) -> str | None:
+    BEST_MIN_LEN = 6
+    seen = set()
+    cleaned = []
+    for c in cands:
+        ct = _clean_title_kumparan(c)
+        if not ct or len(ct) < BEST_MIN_LEN:
+            continue
+        k = ct.lower()
+        if k in seen:
+            continue
+        # filter generik
+        if ct.lower() in ("kumparan", "beranda", "news"):
+            continue
+        seen.add(k)
+        cleaned.append(ct)
+    return cleaned[0] if cleaned else None
+
 # ---------- DOM preclean ----------
 def _preclean_kumparan_html(html: str) -> str:
     """
@@ -48,7 +99,7 @@ def _preclean_kumparan_html(html: str) -> str:
         for node in soup.select(sel):
             node.decompose()
 
-    # 2) Beberapa “ADVERTISEMENT” berupa <span> kecil – sweep berbasis konten
+    # 2) Bersihkan label ADVERTISEMENT kecil
     for node in soup.find_all(True):
         txt = node.get_text(" ", strip=True)
         if txt and txt.strip().upper() == "ADVERTISEMENT":
@@ -56,17 +107,14 @@ def _preclean_kumparan_html(html: str) -> str:
 
     # 3) Whitelist paragraph spans
     allowed: list[str] = []
-    # Kontainer besar renderer (kadang banyak), tapi yang penting paragrafnya
     for sp in soup.select("span[data-qa-id='story-paragraph']"):
-        # Make sure ini bukan bagian dari caption/figure yang tersisa
         if sp.find_parent(["figure", "figcaption"]) is not None:
             continue
         txt = _norm(sp.get_text(" ", strip=True))
         if not _is_noise_text(txt):
             allowed.append(txt)
 
-    # 4) Fallback: beberapa artikel pakai paragraph container tanpa data-qa-id?
-    # Ambil block .track_paragraph → span[data-qa-id=story-paragraph] ada di dalamnya.
+    # 4) Fallback: .track_paragraph
     if not allowed:
         for blk in soup.select(".track_paragraph"):
             sp = blk.find("span", attrs={"data-qa-id": "story-paragraph"})
@@ -76,8 +124,7 @@ def _preclean_kumparan_html(html: str) -> str:
             if not _is_noise_text(txt):
                 allowed.append(txt)
 
-    # 5) Rebuild minimal HTML berisi paragraf doang agar trafilatura clean
-    # (atau langsung join teks – di sini kita biarkan trafilatura tetap proses)
+    # 5) Rebuild minimal HTML
     wrapper = BeautifulSoup("<article></article>", "html.parser")
     art = wrapper.article
     for p in allowed:
@@ -89,13 +136,8 @@ def _preclean_kumparan_html(html: str) -> str:
 
 # ---------- postprocess ----------
 def _postprocess_kumparan(text: str) -> str:
-    """
-    Bersihkan sisa artefak: ADVERTISEMENT, pipa, spasi dobel, dsb.
-    Buang duplikasi judul if somehow lolos (h1 diawali huruf kapital semua, namun kita tidak tarik h1).
-    """
     t = _norm(text)
     t = re.sub(r'\bADVERTISEMENT\b', ' ', t, flags=re.IGNORECASE)
-    # Beberapa artikel push label editorial di awal: "kumparanNEWS" → jarang, tapi filter aman:
     t = re.sub(r'^\s*kumparan(?:news|bisnis|style|tech|oto|bola)\b[:\s,|-]*', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*\|\s*', ' ', t)
     t = re.sub(r'\s{2,}', ' ', t).strip()
@@ -104,9 +146,15 @@ def _postprocess_kumparan(text: str) -> str:
 # ---------- main ----------
 async def extract(url: str) -> ExtractResult:
     html, final_url = await fetch_html(url)
+
+    # --- ambil judul dari HTML asli (sebelum dipreclean)
+    soup_title = BeautifulSoup(html, "html.parser")
+    title_cands = _extract_title_candidates_kumparan(soup_title)
+    title = _pick_best_title_kumparan(title_cands) or ""
+
     cleaned_html = _preclean_kumparan_html(html)
 
-    # Trafilatura tetap kita pakai untuk normalisasi umum & jaga-jaga
+    # Trafilatura untuk normalisasi umum
     text = trafilatura.extract(
         cleaned_html,
         include_comments=False,
@@ -116,14 +164,13 @@ async def extract(url: str) -> ExtractResult:
         url=final_url,
     )
 
-    # Fallback: kalau trafilatura terlalu hemat, langsung join paragraf manual
+    # Fallback ke join paragraf manual
     if not text or len(_norm(text)) < 200:
         soup2 = BeautifulSoup(cleaned_html, "html.parser")
         chunks = [_norm(p.get_text(" ", strip=True)) for p in soup2.find_all("p")]
         text = " ".join([c for c in chunks if c])
 
     if not text or len(_norm(text)) < MIN_TEXT_CHARS:
-        # Kumparan nyaris tidak pakai AMP, tapi kita cek link amp kalau ada
         amp = find_amp_href(html, final_url)
         if amp:
             amp_html, amp_final = await fetch_html(amp)
@@ -146,6 +193,10 @@ async def extract(url: str) -> ExtractResult:
     clean = _postprocess_kumparan(clean)
 
     host = urlparse(final_url).netloc.lower()
-    title = "judul"
-    content = clean
-    return ExtractResult(text=clean, source=host, length=len(clean), title=title, content=content)
+    return ExtractResult(
+        text=clean,
+        source=host,
+        length=len(clean),
+        title=title if title else _clean_title_kumparan(clean[:120]),
+        content=clean,
+    )
