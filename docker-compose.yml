@@ -1,7 +1,7 @@
 services:
   newsx:
     build: .
-    container_name: newsx_api
+    container_name: hoaxbuster_api
     ports:
       - "6666:6666"
     restart: unless-stopped
