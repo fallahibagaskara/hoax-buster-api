@@ -34,7 +34,4 @@ Oleh sebab itu, pihaknya bekerja sama dengan semua pemerintah desa di Kota Santr
 
 testing:
 - https://www.detik.com/jatim/berita/d-8059719/ini-alasan-warga-jombang-tak-demo-meski-pbb-p2-naik-1-202
-- https://www.detik.com/jatim/berita/d-8059719/ini-alasan-warga-jombang-tak-demo-meski-pbb-p2-naik-1-202#google_vignette
-
-
-
+- https://health.detik.com/berita-detikhealth/d-8062327/mpok-alpa-meninggal-karena-kanker-jalani-pengobatan-sejak-hamil-anak-kembar
