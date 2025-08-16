@@ -126,6 +126,9 @@ def _postprocess(text: str) -> str:
     t = _norm(text)
 
     # Hapus byline “TRIBUNNEWS.COM, KOTA -” di awal paragraf
+    t = re.sub(r'^\s*TRIBUN\w+\.COM,\s*[^-]{1,80}-\s*', ' ', t, flags=re.IGNORECASE)
+    t = re.sub(r'^\s*[A-Za-zÀ-ÿ .\'-]+,\s*TRIBUN\w+\.COM\s*[—–-]{1,2}\s*', ' ', t, flags=re.IGNORECASE)
+    t = re.sub(r'^\s*TRIBUN\w+\.COM\s*[—–-]{1,2}\s*', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\bTRIBUNNEWS\.COM,\s*[^-]{1,60}-\s*', ' ', t, flags=re.IGNORECASE)
 
     # Hapus label “Baca juga: …”
