@@ -1,4 +1,3 @@
-# extractor/generic.py
 from urllib.parse import urlparse
 import trafilatura
 from .base import ExtractResult, MIN_TEXT_CHARS, fetch_html, find_amp_href, clean_text_basic

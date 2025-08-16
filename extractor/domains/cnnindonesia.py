@@ -11,17 +11,17 @@ def _norm(s: str) -> str:
 def _clean_title(raw: str) -> str:
     t = _norm(raw)
 
-    # buang prefix breaking/newsy
+    # buang prefix breaking/news
     t = re.sub(r'^\s*(breaking\s+news\s*:\s*|breaking\s+news\s+cnn\s+indonesia\s*[:-]?\s*)',
                '', t, flags=re.IGNORECASE)
 
-    # buang suffix brand & kanal
+    # buang suffix brand
     t = re.sub(r'\s*[-|–]\s*cnn indonesia\b.*$', '', t, flags=re.IGNORECASE)
 
     # buang sisa “| CNN Indonesia” atau “- CNN Indonesia”
     t = re.sub(r'\s*(\||-)\s*cnn indonesia\b.*$', '', t, flags=re.IGNORECASE)
 
-    # rapiin kutip yang dobel/longgar
+    # rapikan kutip yang double/longgar
     t = re.sub(r'^[\'"“”‘’\[\(]+\s*', '', t)
     t = re.sub(r'\s*[\'"“”‘’\]\)]+$', '', t)
 
@@ -29,8 +29,8 @@ def _clean_title(raw: str) -> str:
 
 def _pick_best_title(cands: list[str]) -> str | None:
     """
-    Prioritas: h1 dulu (karena kamu push h1 paling awal), lalu og:title/twitter:title.
-    Saring kandidat yang terlalu pendek/generic, bersihin brand suffix.
+    Prioritas: h1, lalu og:title/twitter:title.
+    Saring karakter yang terlalu pendek/generic, bersihkan brand suffix.
     """
     seen = set()
     BEST_MIN_LEN = 8
@@ -43,7 +43,6 @@ def _pick_best_title(cands: list[str]) -> str | None:
             continue
         if key in seen:
             continue
-        # filter judul generik
         if ct.lower() in ("cnn indonesia", "beranda", "news"):
             continue
         seen.add(key)
@@ -55,12 +54,10 @@ def _pick_best_title(cands: list[str]) -> str | None:
 def _extract_title_candidates(soup: BeautifulSoup) -> list[str]:
     cands = []
 
-    # h1 (judul)
     h1 = soup.find("h1")
     if h1:
         cands.append(_norm(h1.get_text(" ", strip=True)))
 
-    # variasi class yang dipakai
     for sel in [".title", ".detail__title", ".article__title", ".headline", ".judul"]:
         for node in soup.select(sel):
             t = _norm(node.get_text(" ", strip=True))
@@ -75,7 +72,6 @@ def _extract_title_candidates(soup: BeautifulSoup) -> list[str]:
             if content:
                 cands.append(content)
 
-    # dedup sambil pertahankan urutan
     seen = set()
     uniq = []
     for t in cands:
@@ -84,7 +80,7 @@ def _extract_title_candidates(soup: BeautifulSoup) -> list[str]:
             uniq.append(t)
     return uniq
 
-def _preclean_cnn_html(html: str) -> tuple[str, list[str]]:
+def _preclean_html(html: str) -> tuple[str, list[str]]:
     soup = BeautifulSoup(html, "html.parser")
 
     # hapus blok non-body
@@ -113,16 +109,15 @@ def _preclean_cnn_html(html: str) -> tuple[str, list[str]]:
         if low.startswith("lihat juga"):
             node.decompose(); continue
 
-    # kandidat judul sebelum render
     title_candidates = _extract_title_candidates(soup)
     return str(soup), title_candidates
 
 def _strip_leading_title(text: str, title_candidates: list[str]) -> str:
     """
-    Hilangkan judul jika nongol di awal teks.
+    Hilangkan judul jika ada di awal teks.
     - Case-insensitive, normalisasi spasi.
-    - Toleransi sufiks brand: " - CNN Indonesia".
-    - Lindungi agar tidak menghapus kalimat pertama yang bukan judul.
+    - Toleransi suffix brand: " - CNN Indonesia".
+    - Lindungi kalimat pertama yang bukan judul.
     """
     t = text
 
@@ -134,7 +129,7 @@ def _strip_leading_title(text: str, title_candidates: list[str]) -> str:
 
     for raw_title in title_candidates:
         title = _norm(raw_title)
-        if not title or len(title) < 5:  # judul terlalu pendek, skip
+        if not title or len(title) < 5:
             continue
 
         # pattern: ^judul( - CNN Indonesia)?[,.:–-]?
@@ -145,11 +140,11 @@ def _strip_leading_title(text: str, title_candidates: list[str]) -> str:
         new_t, n = re.subn(pattern, "", t, flags=re.IGNORECASE)
         if n > 0:
             t = new_t
-            break  # cukup hapus sekali (kandidat pertama yang match)
+            break
 
     return _norm(t)
 
-def _strip_cnn_dateline(t: str) -> str:
+def _strip_dateline(t: str) -> str:
     # Pola: "Jumat, 15 Agu 2025 11:36 WIB" (opsional diawali "CNN Indonesia")
     t = re.sub(
         r'^\s*(?:cnn\s*indonesia\s*)?(?:[,•-]?\s*)?'
@@ -181,13 +176,12 @@ def _strip_cnn_dateline(t: str) -> str:
     )
     return t
 
-def _postprocess_cnn(text: str, title_candidates: list[str]) -> str:
+def _postprocess(text: str, title_candidates: list[str]) -> str:
     t = text
 
-    # hapus dateline header lebih dulu
-    t = _strip_cnn_dateline(_norm(t))
+    t = _strip_dateline(_norm(t))
 
-    # buang artefak multimedia & CTA
+    # buang multimedia & CTA
     t = re.sub(r'\[Gambar:Gambar CNN\]', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\[Gambas:Gambar CNN\]', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\[Gambar:Video CNN\]', ' ', t, flags=re.IGNORECASE)
@@ -195,7 +189,7 @@ def _postprocess_cnn(text: str, title_candidates: list[str]) -> str:
     t = re.sub(r'^\s*BREAKING NEWS CNN Indonesia[^\n]*', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\bLihat Juga\s*:\s*[^\n]+', ' ', t, flags=re.IGNORECASE)
 
-    # inisial reporter/editor di mana saja, contoh: (mnf/ugo)
+    # inisial reporter/editor, contoh: (mnf/ugo)
     t = re.sub(r'\s*\([a-z]{2,5}/[a-z]{2,5}\)\s*', ' ', t, flags=re.IGNORECASE)
 
     # strip judul di awal
@@ -216,7 +210,7 @@ def _postprocess_cnn(text: str, title_candidates: list[str]) -> str:
 # -------- Main handler --------
 async def extract(url: str) -> ExtractResult:
     html, final_url = await fetch_html(url)
-    cleaned_html, title_cands = _preclean_cnn_html(html)
+    cleaned_html, title_cands = _preclean_html(html)
 
     text = trafilatura.extract(
         cleaned_html, include_comments=False, include_images=False,
@@ -227,7 +221,7 @@ async def extract(url: str) -> ExtractResult:
         amp = find_amp_href(html, final_url)
         if amp:
             amp_html, amp_final = await fetch_html(amp)
-            amp_cleaned, amp_title_cands = _preclean_cnn_html(amp_html)
+            amp_cleaned, amp_title_cands = _preclean_html(amp_html)
             text2 = trafilatura.extract(
                 amp_cleaned, include_comments=False, include_images=False,
                 favor_recall=True, target_language="id", url=amp_final
@@ -239,11 +233,9 @@ async def extract(url: str) -> ExtractResult:
         raise ValueError("Konten artikel berita terlalu pendek / gagal diekstrak.")
 
     clean = clean_text_basic(text)
-    clean = _postprocess_cnn(clean, title_cands)
+    clean = _postprocess(clean, title_cands)
 
-    # ---- NEW: tentukan judul ----
     title = _pick_best_title(title_cands) or ""
-    # fallback terakhir: pakai 120 huruf pertama (jarang diperlukan)
     if not title:
         title = _clean_title(clean[:120])
 

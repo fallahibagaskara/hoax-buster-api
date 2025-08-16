@@ -1,11 +1,8 @@
-# main.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
 from fastapi.middleware.cors import CORSMiddleware
-
-# === IMPORT extractor baru ===
 from extractor import extract_article, SUPPORTED_DOMAINS
 
 app = FastAPI(title="IndoBERT Hoax Detector")
@@ -39,7 +36,6 @@ class Item(BaseModel):
 
 @torch.inference_mode()
 def _predict_single(text: str):
-    # aman untuk dipakai dari endpoint manapun
     inputs = tokenizer([text], truncation=True, padding=True, max_length=384, return_tensors="pt")
     logits = model(**inputs).logits
     probs = torch.softmax(logits, dim=-1)[0].tolist()
@@ -53,7 +49,6 @@ def predict(item: Item):
 
 @app.get("/supported_sources")
 def supported_sources():
-    # tampilkan uniq tanpa www.
     uniq = sorted(set(SUPPORTED_DOMAINS))
     display = sorted(set([d.replace("www.","") for d in uniq]))
     return {"domains": display}
@@ -64,7 +59,6 @@ async def extract_url(payload: URLIn):
         ext = await extract_article(str(payload.url))
         return {"text": ext.text, "source": ext.source, "length": ext.length, "title": ext.title, "content": ext.content}
     except ValueError as e:
-        # error validasi / ekstraksi yang bisa dipahami user
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gagal mengambil/ekstrak artikel berita: {e}")

@@ -1,4 +1,3 @@
-# extractor/base.py
 import asyncio
 import re
 import time
