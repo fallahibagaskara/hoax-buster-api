@@ -4,12 +4,13 @@ import torch
 from transformers import BertTokenizer, BertForSequenceClassification
 from fastapi.middleware.cors import CORSMiddleware
 from extractor import extract_article, SUPPORTED_DOMAINS
+from analyzer import infer_category, compute_credibility
 
 app = FastAPI(title="IndoBERT Hoax Detector")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["https://hoaxbuster.vercel.app"],
+    allow_origins = ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,6 +31,11 @@ class PredictOut(BaseModel):
     extracted_chars: int
     title: str
     content: str
+    category: str | None = None
+    verdict: str | None = None        
+    confidence: float | None = None   
+    reasons: list[str] | None = None  
+    credibility_score: float | None = None 
 
 class Item(BaseModel):
     text: str
@@ -72,6 +78,14 @@ async def predict_url(payload: URLIn):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gagal mengambil/ekstrak artikel berita: {e}")
 
+    cat, cat_conf = infer_category(ext.title, ext.content)
+    score, reasons, verdict = compute_credibility(str(payload.url), ext.title, ext.content)
+    ext.category = cat
+    ext.confidence = float(cat_conf)
+    ext.credibility_score = float(score)
+    ext.verdict = verdict
+    ext.reasons = reasons
+
     pred = _predict_single(ext.text)
     return PredictOut(
         label=pred["label"],
@@ -80,5 +94,10 @@ async def predict_url(payload: URLIn):
         source=ext.source.replace("www.",""),
         extracted_chars=ext.length,
         title=ext.title,
-        content=ext.content
+        content=ext.content,
+        category=ext.category,
+        verdict=ext.verdict,
+        confidence=ext.confidence,
+        reasons=ext.reasons,
+        credibility_score=ext.credibility_score,
     )

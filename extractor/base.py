@@ -34,7 +34,7 @@ CACHE_TTL_SECONDS = 300
 _HOST_LIMIT = 5
 
 _HOST_LIMITERS: Dict[str, asyncio.Semaphore] = {}
-_cache: Dict[str, tuple[float, object]] = {}  # key -> (expires_at, value)
+_cache: Dict[str, tuple[float, object]] = {}
 
 @dataclass
 class ExtractResult:
@@ -43,6 +43,11 @@ class ExtractResult:
     length: int
     title: str
     content: str
+    category: str | None = None
+    verdict: str | None = None        
+    confidence: float | None = None   
+    reasons: list[str] | None = None  
+    credibility_score: float | None = None 
 
 # ---------- Util ----------
 def normalize_url(raw: str) -> str:
