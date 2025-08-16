@@ -44,19 +44,28 @@ _SENSATIONAL = [
 ]
 
 def compute_credibility(url: str, title: str, content: str) -> tuple[float, list[str], str]:
-    host = urlparse(url).netloc.lower()
+    host = ""
+    if url:
+        try:
+            host = urlparse(url).netloc.lower()
+        except Exception:
+            host = ""
+
     score = 50.0
     reasons: list[str] = []
 
-    if any(h in host for h in _REPUTABLE):
-        score += 25; reasons.append("Sumber media arus utama.")
+    if host:
+        if any(h in host for h in _REPUTABLE):
+            score += 25; reasons.append("Sumber media arus utama.")
+        else:
+            reasons.append("Sumber di luar whitelist media arus utama.")
     else:
-        reasons.append("Sumber di luar whitelist media arus utama.")
+        reasons.append("Input teks mentah (tanpa domain).")
 
     has_quote = bool(re.search(r'“.+?”|".+?"', content))
     has_number = bool(re.search(r'\b\d{1,3}(?:[.,]\d{3})*(?:,\d+)?\b', content))
-    if has_quote: score += 5; reasons.append("Memuat kutipan narasumber.")
-    if has_number: score += 5; reasons.append("Memuat data/angka.")
+    if has_quote: score += 5; reasons.append(" Memuat kutipan narasumber.")
+    if has_number: score += 5; reasons.append(" Memuat data/angka.")
 
     hits = sum(1 for p in _SENSATIONAL if re.search(p, content, re.IGNORECASE))
     if hits:

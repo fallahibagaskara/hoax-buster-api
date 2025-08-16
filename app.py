@@ -40,6 +40,15 @@ class PredictOut(BaseModel):
 class Item(BaseModel):
     text: str
 
+def _guess_title(text: str) -> str:
+    t = (text or "").strip()
+    if not t:
+        return ""
+    # ambil kalimat/line pertama, batasi panjang 120
+    first = t.split("\n", 1)[0].split(". ", 1)[0]
+    title = first if 10 <= len(first) <= 120 else t[:120]
+    return title.strip()
+
 @torch.inference_mode()
 def _predict_single(text: str):
     inputs = tokenizer([text], truncation=True, padding=True, max_length=384, return_tensors="pt")
@@ -48,10 +57,29 @@ def _predict_single(text: str):
     pred = int(torch.argmax(logits, dim=-1).item())
     return {"label": pred, "p_valid": probs[0], "p_hoax": probs[1]}
 
-@app.post("/predict")
+@app.post("/predict", response_model=PredictOut)
 @torch.inference_mode()
 def predict(item: Item):
-    return _predict_single(item.text)
+    pred = _predict_single(item.text)
+
+    title = _guess_title(item.text)
+    cat, cat_conf = infer_category(title, item.text)
+    score, reasons, verdict = compute_credibility(None, title, item.text)  # url=None
+
+    return PredictOut(
+        label=pred["label"],
+        p_valid=float(pred["p_valid"]),
+        p_hoax=float(pred["p_hoax"]),
+        source="(raw-text)",
+        extracted_chars=len(item.text or ""),
+        title=title,
+        content=item.text,
+        category=cat,
+        verdict=verdict,
+        confidence=float(cat_conf),
+        reasons=reasons,
+        credibility_score=float(score),
+    )
 
 @app.get("/supported_sources")
 def supported_sources():
