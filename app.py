@@ -44,7 +44,6 @@ def _guess_title(text: str) -> str:
     t = (text or "").strip()
     if not t:
         return ""
-    # ambil kalimat/line pertama, batasi panjang 120
     first = t.split("\n", 1)[0].split(". ", 1)[0]
     title = first if 10 <= len(first) <= 120 else t[:120]
     return title.strip()
