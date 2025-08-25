@@ -1,0 +1,12 @@
+__pycache__/
+.venv/
+models/
+*.bin
+*.pt
+*.onnx
+*.safetensors
+*.ckpt
+*.tar
+*.zip
+*.env
+.env

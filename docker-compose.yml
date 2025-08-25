@@ -1,0 +1,10 @@
+services:
+  hoaxbuster:
+    build: .
+    image: hoaxbuster_api:latest
+    container_name: hoaxbuster_api
+    ports:
+      - "6666:6666"
+    restart: unless-stopped
+    env_file:
+      - .env
