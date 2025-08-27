@@ -187,11 +187,21 @@ def _preclean_html(html: str) -> tuple[str, list[str]]:
 
 def _postprocess(text: str, title_candidates: list[str]) -> str:
     t = text
+    t = re.sub(
+        r'^\s*[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ\'().\- ]{0,40}\s[—–-]\s+',
+        ' ',
+        t
+    )
     t = re.sub(r'\s*\b[Ff]oto[:：]\s*[^。.!?\n\r|]*?(detik(?:com)?|detik\w+)[^。.!?\n\r|]*\s*\|?', ' ', t)
     t = re.sub(r'\s*\b[Ss]aksikan\b[^:]{0,100}\bdetik\w*[^:]{0,100}:', ' ', t)
     t = re.sub(r'\s*\b[Tt]onton\b[^:]{0,100}\bdetik\w*[^:0-9]{0,100}:', ' ', t)
     t = re.sub(r'\s*\([a-z]{2,5}/[a-z]{2,5}\)\s*', ' ', t, flags=re.IGNORECASE)
     t = _strip_leading_title(_norm(t), title_candidates)
+    t = re.sub(r'\bBerita\s*Terkait\b.*$', ' ', t, flags=re.IGNORECASE | re.DOTALL)
+    t = re.sub(r'\s*[—–-]\s*20DETIK\s*$', ' ', t, flags=re.IGNORECASE)               
+    t = re.sub(r'\b[\w .\'-]{2,60}\s*[—–-]\s*20DETIK\s*$', ' ', t, flags=re.IGNORECASE)
+    t = re.sub(r'(?:\s*detik[a-zA-Z]+){1,}\s*$', ' ', t, flags=re.IGNORECASE)
+    t = re.sub(r'\b(Kategori|Layanan\s+Detik\s+Network|Views)\b.*$', ' ', t, flags=re.IGNORECASE | re.DOTALL)
     t = re.sub(r'\s*\|\s*', ' ', t)
     t = re.sub(r'\s{2,}', ' ', t).strip()
     return t

@@ -219,7 +219,7 @@ REQUEST_TIMEOUT=20
 
    ```bash
    {
-      "domains": ["cnnindonesia.com", "detik.com", "kompas.com", "liputan6.com", "tempo.co", "tribunnews.com", "kumparan.com"]
+      "domains": ["cnnindonesia.com", "detik.com", "kompas.com", "liputan6.com", "tempo.co", "tribunnews.com", "kumparan.com", "antaranews.com"]
    }
    ```
 
@@ -261,8 +261,8 @@ Edit SUPPORTED_DOMAINS di extractor.py:
 ```bash
 SUPPORTED_DOMAINS = [
   "kompas.com", "cnnindonesia.com", "tempo.co", "detik.com",
-  "liputan6.com", "tribunnews.com", "kumparan.com",
-  # tambah di sini → "voi.id", "kumparan.com", dst.
+  "liputan6.com", "tribunnews.com", "kumparan.com", "antaranews.com",
+  # tambah di sini → "voi.id" dst.
 ]
 ```
 

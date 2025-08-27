@@ -269,6 +269,16 @@ def _postprocess(text: str, title_candidates: list[str]) -> str:
     t = re.sub(r'^\s*BREAKING NEWS CNN Indonesia[^\n]*', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\bLihat Juga\s*:\s*[^\n]+', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*\([a-z]{2,5}/[a-z]{2,5}\)\s*', ' ', t, flags=re.IGNORECASE)
+    t = re.sub(
+        r'\s*\((?:antara(?:news)?|reuters|afp|ap)\s*/\s*[a-z]{2,10}\)\s*$',
+        ' ',
+        t, flags=re.IGNORECASE
+    )
+    t = re.sub(
+        r'\s*\((?:antara(?:news)?|reuters|afp|ap)\)\s*$',
+        ' ',
+        t, flags=re.IGNORECASE
+    )
     t = _strip_leading_title(_norm(t), title_candidates)
     t = re.sub(
         r'\b(TOPIK\s+TERKAIT|ARTIKEL\s+TERKAIT|TERKAIT\s+LAINNYA\s+DI\s+DETIKNETWORK)\b.*$',

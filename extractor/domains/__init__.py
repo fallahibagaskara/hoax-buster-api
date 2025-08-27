@@ -2,7 +2,7 @@
 from typing import Callable, Awaitable, Dict
 from ..base import ExtractResult
 
-from . import detik, kompas, cnnindonesia, tempo, liputan6, tribunnews, kumparan
+from . import detik, kompas, cnnindonesia, tempo, liputan6, tribunnews, kumparan, antaranews
 
 DOMAIN_HANDLERS: Dict[str, Callable[[str], Awaitable[ExtractResult]]] = {
     "detik.com": detik.extract,
@@ -12,4 +12,5 @@ DOMAIN_HANDLERS: Dict[str, Callable[[str], Awaitable[ExtractResult]]] = {
     "liputan6.com": liputan6.extract,
     "tribunnews.com": tribunnews.extract,
     "kumparan.com": kumparan.extract,
+    "antaranews.com": antaranews.extract,
 }

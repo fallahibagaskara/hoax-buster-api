@@ -16,6 +16,7 @@ SUPPORTED_DOMAINS = [
     "liputan6.com",
     "tribunnews.com",
     "kumparan.com",
+    "antaranews.com",
 ]
 
 DEFAULT_HEADERS = {
