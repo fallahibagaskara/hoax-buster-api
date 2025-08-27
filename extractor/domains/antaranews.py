@@ -1,7 +1,7 @@
 import re
 from urllib.parse import urlparse
 import trafilatura
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
 from ..base import ExtractResult, MIN_TEXT_CHARS, fetch_html, find_amp_href, clean_text_basic
 
@@ -25,6 +25,7 @@ _MONTH_ID = {
     "des":"12","desember":"12",
 }
 
+# -------- Helpers --------
 def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s or "").strip()
 

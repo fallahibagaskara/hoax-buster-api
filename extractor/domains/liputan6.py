@@ -36,7 +36,7 @@ def _parse_meta_datetimes(soup: BeautifulSoup) -> tuple[str | None, str | None]:
     """Return (published_at, updated_at) dari meta jika ada"""
     pub = None
     upd = None
-    # published
+
     for m in soup.select('meta[property="article:published_time"], meta[itemprop="datePublished"], meta[name="pubdate"]'):
         val = (m.get("content") or "").strip()
         if not val:
