@@ -360,7 +360,17 @@ curl "http://localhost:8000/articles/hoax?page=1&limit=20"
 
 ```json
 {
-  "detail": "Format URL tidak valid"
+  "detail": [
+    {
+      "type": "url_parsing",
+      "loc": ["body", "url"],
+      "msg": "Input should be a valid URL, invalid international domain name",
+      "input": "https://example. com/read/",
+      "ctx": {
+        "error": "invalid international domain name"
+      }
+    }
+  ]
 }
 ```
 
@@ -368,7 +378,7 @@ curl "http://localhost:8000/articles/hoax?page=1&limit=20"
 
 ```json
 {
-  "detail": "Domain ‘example.com’ tidak didukung"
+  "detail": "Domain ‘example.com’ belum didukung."
 }
 ```
 
@@ -376,7 +386,7 @@ curl "http://localhost:8000/articles/hoax?page=1&limit=20"
 
 ```json
 {
-  "detail": "Gagal mengambil artikel: Connection timeout"
+  "detail": "Gagal mengambil/ekstrak artikel berita: {error}"
 }
 ```
 

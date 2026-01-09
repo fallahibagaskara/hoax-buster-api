@@ -1,4 +1,3 @@
-# extractor/__init__.py
 from urllib.parse import urlparse
 from .base import (
     ExtractResult, SUPPORTED_DOMAINS, normalize_url, public_suffix_match,
@@ -15,7 +14,7 @@ async def extract_article(url_raw: str) -> ExtractResult:
 
     domain_hit = public_suffix_match(host)
     if not domain_hit:
-        raise ValueError(f"Domain '{host}' belum didukung.")
+        raise ValueError(f"Domain '{host}' belum didukung")
 
     cache_key = f"extract:{url}"
     cached = cache_get(cache_key)
