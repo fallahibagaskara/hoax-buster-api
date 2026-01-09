@@ -11,53 +11,6 @@ from analyzer import infer_category, analyze_evidence, reasons_from_prediction
 from typing import Optional
 from datetime import datetime, timezone
 from db import connect as mongo_connect, close as mongo_close, coll, ensure_indexes
-from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
-
-def load_model_from_checkpoint(checkpoint_path: str):
-    """
-    Load model dari .pt checkpoint
-    """
-    print(f"[model] Loading from checkpoint: {checkpoint_path}")
-    
-    # Load checkpoint
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
-    
-    # Initialize model architecture
-    model = BertForSequenceClassification.from_pretrained(
-        'indobenchmark/indobert-base-p1',
-        num_labels=2,
-        hidden_dropout_prob=0.1
-    )
-
-    # Load trained weights
-    if 'model_state_dict' in checkpoint:
-        model.load_state_dict(checkpoint['model_state_dict'])
-    else:
-        model.load_state_dict(checkpoint)
-    
-    # Set to eval mode
-    model.eval()
-    
-    # Load tokenizer
-    tokenizer = BertTokenizer.from_pretrained('indobenchmark/indobert-base-p1')
-    
-    if 'history' in checkpoint:
-        history = checkpoint['history']
-        if 'val_acc' in history and len(history['val_acc']) > 0:
-            best_val_acc = max(history['val_acc'])
-            print(f"[model] Best Val Accuracy: {best_val_acc:.4f}")
-        if 'val_f1' in history and len(history['val_f1']) > 0:
-            best_val_f1 = max(history['val_f1'])
-            print(f"[model] Best Val F1-Score: {best_val_f1:.4f}")
-            
-    print(f"[model] Model loaded successfully")
-    
-    return model, tokenizer
-
-# Load Model
-CHECKPOINT_PATH = "./models/indobert_final_clean_with_info.pt"
-model, tokenizer = load_model_from_checkpoint(CHECKPOINT_PATH)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -81,12 +34,15 @@ app = FastAPI(title="Hoax Buster", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://hoaxbuster.vercel.app", "http://localhost:3000"],
+    allow_origins = ["https://hoaxbuster.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+MODEL_DIR = "./models/indobert-hoax-detector/final"
+tokenizer = BertTokenizer.from_pretrained(MODEL_DIR)
+model = BertForSequenceClassification.from_pretrained(MODEL_DIR).eval()
 
 class URLIn(BaseModel):
     url: HttpUrl
@@ -140,7 +96,7 @@ def _guess_title(text: str) -> str:
         return ""
     t = re.sub(r"^\s*(baca juga|lihat juga)\s*:.*?\n+", "", t, flags=re.IGNORECASE)
     first_line = t.split("\n", 1)[0].strip()
-    first_sent = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0]
+    first_sent  = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0]
     cand = first_sent if 10 <= len(first_sent) <= 120 else first_line[:120]
     cand = re.sub(r'^[\'"“”‘’\[\(]+\s*', '', cand)
     cand = re.sub(r'\s*[\'"“”‘’\]\)]+$', '', cand)
@@ -152,22 +108,8 @@ def count_sentences(txt: str) -> int:
     parts = re.split(r"[.!?\n]+", txt)
     return len([s.strip() for s in parts if len(s.strip()) > 3])
 
-# Init preprocessor
-stemmer = StemmerFactory().create_stemmer()
-stopword_remover = StopWordRemoverFactory().create_stop_word_remover()
-
-def preprocess_text(text):
-    import re
-    text = re.sub(r'[^a-zA-Z0-9\s]', ' ', text)
-    text = text.lower()
-    text = re.sub(r'\s+', ' ', text).strip()
-    text = stemmer.stem(text)
-    text = stopword_remover.remove(text)
-    return text
-
 @torch.inference_mode()
 def _predict_single(text: str):
-    text = preprocess_text(text)
     inputs = tokenizer([text], truncation=True, padding=True, max_length=384, return_tensors="pt")
     logits = model(**inputs).logits
     probs = torch.softmax(logits, dim=-1)[0].tolist()
@@ -208,22 +150,11 @@ async def _store_result(doc: dict) -> str | None:
         return str(res.upserted_id)
     return None
 
-@app.get("/")
-def root():
-    """Root"""
-    return {
-        "message": "Hoax Buster API",
-        "model": "IndoBERT",
-        "status": "running",
-        "version": "2.0",
-    }
-
 @app.get("/articles/hoax")
 async def list_hoax(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
 ):
-    """Daftar artikel hoaks dari database"""
     c = coll()
     skip = (page - 1) * limit
 
@@ -277,6 +208,7 @@ def predict(item: Item):
     """
     Prediksi dari TEKS langsung.
     """
+
     overall_t0 = perf_counter()
 
     text = item.text or ""
@@ -318,23 +250,15 @@ def predict(item: Item):
 
 @app.get("/supported_sources")
 def supported_sources():
-    """Sumber berita yang didukung"""
     uniq = sorted(set(SUPPORTED_DOMAINS))
     display = sorted(set([d.replace("www.","") for d in uniq]))
     return {"domains": display}
 
 @app.post("/extract")
 async def extract_url(payload: URLIn):
-    """Ekstrak artikel dari URL"""
     try:
         ext = await extract_article(str(payload.url))
-        return {
-            "text": ext.text, 
-            "source": ext.source, 
-            "length": ext.length, 
-            "title": ext.title, 
-            "content": ext.content
-        }
+        return {"text": ext.text, "source": ext.source, "length": ext.length, "title": ext.title, "content": ext.content}
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
@@ -345,6 +269,7 @@ async def predict_url(payload: URLIn):
     """
     Prediksi dari URL
     """
+
     overall_t0 = perf_counter()
 
     t_ext0 = perf_counter()
@@ -415,62 +340,3 @@ async def predict_url(payload: URLIn):
         total_ms=total_ms,
         extraction_ms=extraction_ms,
     )
-
-@app.get("/health")
-def health_check():
-    """Health check"""
-    return {
-        "status": "healthy",
-        "model_loaded": model is not None,
-        "tokenizer_loaded": tokenizer is not None,
-    }
-
-@app.get("/model_info")
-def model_info():
-    """Informasi model"""
-    try:
-        checkpoint = torch.load(CHECKPOINT_PATH, map_location='cpu')
-        
-        info = {
-            "model_type": "IndoBERT",
-            "base_model": "indobenchmark/indobert-base-p1",
-            "num_labels": 2,
-            "labels": ["VALID", "HOAX"],
-            # "checkpoint_path": CHECKPOINT_PATH,
-        }
-        
-        if 'history' in checkpoint:
-            history = checkpoint['history']
-            info['training_history'] = {
-                'final_train_acc': history['train_acc'][-1] if 'train_acc' in history else None,
-                'final_val_acc': history['val_acc'][-1] if 'val_acc' in history else None,
-                'best_val_acc': max(history['val_acc']) if 'val_acc' in history else None,
-                'best_val_f1': max(history['val_f1']) if 'val_f1' in history else None,
-                'epochs_trained': len(history['train_acc']) if 'train_acc' in history else None,
-            }
-        
-        if 'learning_rate' in checkpoint:
-            info['learning_rate'] = checkpoint['learning_rate']
-        
-        return info
-    
-    except Exception as e:
-        return {
-            "model_type": "IndoBERT",
-            "base_model": "indobenchmark/indobert-base-p1",
-            "num_labels": 2,
-            "labels": ["VALID", "HOAX"],
-            "error": f"Could not load checkpoint info: {str(e)}"
-        }
-
-if __name__ == "__main__":
-    import uvicorn
-    
-    print("\n" + "="*80)
-    print("🚀 Starting Hoax Buster API")
-    print("="*80)
-    print(f"Model: {CHECKPOINT_PATH}")
-    print(f"Base Model: indobenchmark/indobert-base-p1")
-    print("="*80 + "\n")
-    
-    uvicorn.run(app, host="0.0.0.0", port=8000)
