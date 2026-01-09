@@ -81,7 +81,7 @@ app = FastAPI(title="Hoax Buster", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://hoaxbuster.vercel.app", "http://localhost:3000"],
+    allow_origins=["https://hoaxbuster.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
