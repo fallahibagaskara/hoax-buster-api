@@ -81,6 +81,40 @@ MONGO_COLL=articles
 uvicorn app:app --host 0.0.0.0 --port 8000 --proxy-headers
 ```
 
+### Docker (Recommended for production)
+
+**Dockerfile**
+
+```bash
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc build-essential \
+    libxml2-dev libxslt1-dev zlib1g-dev \
+    libffi-dev libssl-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --upgrade pip wheel && pip install -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+```
+
+**Build & Run**
+
+```bash
+docker compose up -d --build
+docker compose logs -f
+```
+
 Server will be available at `http://localhost:8000`
 
 ## API Documentation
@@ -120,8 +154,10 @@ Retrieve model architecture and training metrics.
   "num_labels": 2,
   "labels": ["VALID", "HOAX"],
   "training_history": {
-    "best_val_f1": 0.9729,
-    "best_val_acc": 0.9576,
+    "final_train_acc": 0.9989862418537292,
+    "final_val_acc": 0.995945945945946,
+    "best_val_acc": 0.995945945945946,
+    "best_val_f1": 0.9965034965034965,
     "epochs_trained": 5
   },
   "learning_rate": 2e-5
