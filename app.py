@@ -11,8 +11,7 @@ from analyzer import infer_category, analyze_evidence, reasons_from_prediction
 from typing import Optional
 from datetime import datetime, timezone
 from db import connect as mongo_connect, close as mongo_close, coll, ensure_indexes
-from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
+from preprocessor import HoaxDataPreprocessor
 
 def load_model_from_checkpoint(checkpoint_path: str):
     """
@@ -152,22 +151,9 @@ def count_sentences(txt: str) -> int:
     parts = re.split(r"[.!?\n]+", txt)
     return len([s.strip() for s in parts if len(s.strip()) > 3])
 
-# Init preprocessor
-stemmer = StemmerFactory().create_stemmer()
-stopword_remover = StopWordRemoverFactory().create_stop_word_remover()
-
-def preprocess_text(text):
-    import re
-    text = re.sub(r'[^a-zA-Z0-9\s]', ' ', text)
-    text = text.lower()
-    text = re.sub(r'\s+', ' ', text).strip()
-    text = stemmer.stem(text)
-    text = stopword_remover.remove(text)
-    return text
-
 @torch.inference_mode()
 def _predict_single(text: str):
-    text = preprocess_text(text)
+    text = HoaxDataPreprocessor().preprocess_pipeline(text)
     inputs = tokenizer([text], truncation=True, padding=True, max_length=384, return_tensors="pt")
     logits = model(**inputs).logits
     probs = torch.softmax(logits, dim=-1)[0].tolist()

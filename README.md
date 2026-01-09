@@ -30,7 +30,7 @@ The underlying model is fine-tuned IndoBERT (Indonesian BERT) trained on a curat
 
 ## Requirements
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - 4GB RAM minimum (8GB recommended for production)
 - CPU or GPU (GPU accelerates inference but not required)
 
@@ -46,8 +46,8 @@ cd hoax-buster-api
 ### 2. Create Virtual Environment
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv .venv
+source .venv/bin/activate # Windows: .venv\Scripts\activate
 ```
 
 ### 3. Install Dependencies
